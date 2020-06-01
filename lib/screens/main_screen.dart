@@ -1,5 +1,5 @@
-import 'package:flash_chat/screens/chat_screen.dart';
 import 'package:flash_chat/screens/contacts_screen.dart';
+import 'package:flash_chat/screens/conversations_screen.dart';
 import 'package:flash_chat/screens/invitations_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -13,10 +13,8 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  static const TextStyle optionStyle =
-      TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
   static List<Widget> _widgetOptions = <Widget>[
-    ChatScreen(),
+    ConversationsScreen(),
     ContactsScreen(),
     InvitationsScreen()
   ];

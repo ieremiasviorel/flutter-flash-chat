@@ -1,5 +1,6 @@
 import 'package:flash_chat/screens/chat_screen.dart';
 import 'package:flash_chat/screens/contacts_screen.dart';
+import 'package:flash_chat/screens/conversations_screen.dart';
 import 'package:flash_chat/screens/invitations_screen.dart';
 import 'package:flash_chat/screens/main_screen.dart';
 import 'package:flash_chat/screens/profile_screen.dart';
@@ -23,6 +24,7 @@ class FlashChat extends StatelessWidget {
         ProfileScreen.routeName: (context) => ProfileScreen(),
         LoginScreen.routeName: (context) => LoginScreen(),
         MainScreen.routeName: (context) => MainScreen(),
+        ConversationsScreen.routeName: (context) => ConversationsScreen(),
         ContactsScreen.routeName: (context) => ContactsScreen(),
         InvitationsScreen.routeName: (context) => InvitationsScreen(),
         ChatScreen.routeName: (context) => ChatScreen()

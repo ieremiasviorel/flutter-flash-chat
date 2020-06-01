@@ -154,7 +154,7 @@ class UserContactsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.all(10),
+      padding: EdgeInsets.all(5),
       child: Card(
         child: Row(
           children: <Widget>[

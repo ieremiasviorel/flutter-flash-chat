@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flash_chat/models/conversation.dart';
+import 'package:flash_chat/models/message.dart';
 import 'package:flash_chat/models/user_invitation.dart';
 import 'package:flash_chat/models/user_profile.dart';
 
@@ -147,6 +149,62 @@ class UserService {
         .delete();
 
     return userInvitation;
+  }
+
+  Future<List<Conversation>> getUserConversations(String userEmail) async {
+    final List<Conversation> conversations = [];
+
+    final UserProfile user = await getUserProfileByEmail(userEmail);
+    final List<UserProfile> contacts = await getUserContacts(userEmail);
+
+    await Future.forEach(contacts, (contact) async {
+      final lastMessageAsSender =
+          await getLatestMessage(userEmail, contact.email);
+      final lastMessageAsReceiver =
+          await getLatestMessage(contact.email, userEmail);
+
+      if (lastMessageAsSender != null || lastMessageAsReceiver != null) {
+        final lastMessage = (lastMessageAsSender != null
+                    ? lastMessageAsSender.messageTimestamp
+                    : 0) >
+                (lastMessageAsReceiver != null
+                    ? lastMessageAsReceiver.messageTimestamp
+                    : 0)
+            ? lastMessageAsSender
+            : lastMessageAsReceiver;
+
+        conversations.add(Conversation(user, contact, lastMessage));
+      }
+    });
+
+    conversations
+        .sort((Conversation conversationA, Conversation conversationB) {
+      return conversationB.lastMessage.messageTimestamp -
+          conversationA.lastMessage.messageTimestamp;
+    });
+
+    return conversations;
+  }
+
+  Future<Message> getLatestMessage(
+      String senderEmail, String receiverEmail) async {
+    final latestMessageDocument = await _store
+        .collection('messages')
+        .where('senderEmail', isEqualTo: senderEmail)
+        .where('receiverEmail', isEqualTo: receiverEmail)
+        .orderBy('messageTimestamp', descending: true)
+        .limit(1)
+        .getDocuments()
+        .then((latestMessageQueryResult) => latestMessageQueryResult.documents)
+        .then((latestMessageDocuments) => latestMessageDocuments.isNotEmpty
+            ? latestMessageDocuments[0]
+            : null);
+
+    if (latestMessageDocument != null && latestMessageDocument.data != null) {
+      return Message.fromJson(latestMessageDocument.data);
+    } else {
+      return null;
+    }
   }
 
   String invitationDocumentKey(UserInvitation userInvitation) {
