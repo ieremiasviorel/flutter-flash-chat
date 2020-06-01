@@ -1,3 +1,4 @@
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flash_chat/models/user_invitation.dart';
 import 'package:flash_chat/models/user_profile.dart';
 import 'package:flash_chat/services/user_service.dart';
@@ -14,7 +15,7 @@ class ContactsScreen extends StatefulWidget {
 class _ContactsScreenState extends State<ContactsScreen> {
   final UserService _userService = UserService.instance;
 
-  List<UserProfile> userContacts = new List<UserProfile>();
+  List<UserProfile> userContacts;
   bool showSpinner = false;
 
   @override
@@ -28,14 +29,27 @@ class _ContactsScreenState extends State<ContactsScreen> {
     return Scaffold(
       backgroundColor: Colors.lightBlue[100],
       body: ModalProgressHUD(
-          child: ListView.builder(
-              scrollDirection: Axis.vertical,
-              shrinkWrap: true,
-              itemCount: userContacts.length,
-              itemBuilder: (context, index) {
-                final userContact = userContacts[index];
-                return UserContactsList(userContact: userContact);
-              }),
+          child: userContacts != null
+              ? userContacts.isNotEmpty
+                  ? ListView.builder(
+                      scrollDirection: Axis.vertical,
+                      shrinkWrap: true,
+                      itemCount: userContacts.length,
+                      itemBuilder: (context, index) {
+                        final userContact = userContacts[index];
+                        return UserContactsList(userContact: userContact);
+                      })
+                  : Center(
+                      child: TypewriterAnimatedTextKit(
+                      text: ['no added contacts'],
+                      speed: Duration(milliseconds: 50),
+                      totalRepeatCount: 1,
+                      textStyle: TextStyle(
+                        fontSize: 25.0,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ))
+              : Container(),
           inAsyncCall: showSpinner),
       floatingActionButton: FloatingActionButton(
         onPressed: onAddContactPress,

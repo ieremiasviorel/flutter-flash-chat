@@ -1,3 +1,4 @@
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flash_chat/models/user_invitation.dart';
 import 'package:flash_chat/services/user_service.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +14,7 @@ class InvitationsScreen extends StatefulWidget {
 class _InvitationsScreenState extends State<InvitationsScreen> {
   final UserService _userService = UserService.instance;
 
-  List<UserInvitation> userInvitations = new List<UserInvitation>();
+  List<UserInvitation> userInvitations;
   bool showSpinner = false;
 
   @override
@@ -27,15 +28,28 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
     return Scaffold(
       backgroundColor: Colors.lightBlue[100],
       body: ModalProgressHUD(
-          child: ListView.builder(
-              scrollDirection: Axis.vertical,
-              shrinkWrap: true,
-              itemCount: userInvitations.length,
-              itemBuilder: (context, index) {
-                final userInvitation = userInvitations[index];
-                return Invitation(
-                    userInvitation, acceptUserInvitation, rejectUserInvitation);
-              }),
+          child: userInvitations != null
+              ? userInvitations.isNotEmpty
+                  ? ListView.builder(
+                      scrollDirection: Axis.vertical,
+                      shrinkWrap: true,
+                      itemCount: userInvitations.length,
+                      itemBuilder: (context, index) {
+                        final userInvitation = userInvitations[index];
+                        return Invitation(userInvitation, acceptUserInvitation,
+                            rejectUserInvitation);
+                      })
+                  : Center(
+                      child: TypewriterAnimatedTextKit(
+                      text: ['no pending invitations'],
+                      speed: Duration(milliseconds: 50),
+                      totalRepeatCount: 1,
+                      textStyle: TextStyle(
+                        fontSize: 25.0,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ))
+              : Container(),
           inAsyncCall: showSpinner),
     );
   }
