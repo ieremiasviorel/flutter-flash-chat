@@ -185,7 +185,8 @@ class UserService {
     final latestMessageDocument = await _store
         .collection('messages')
         .where('participants',
-            isEqualTo: [participantAEmail, participantBEmail])
+            isEqualTo: Message.createParticipantsField(
+                participantAEmail, participantBEmail))
         .orderBy('messageTimestamp', descending: true)
         .limit(1)
         .getDocuments()
