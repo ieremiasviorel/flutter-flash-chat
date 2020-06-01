@@ -140,7 +140,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
     final invitation = UserInvitation(inviterUserProfile, invitedUsername);
 
     try {
-      _userService.setUserInvitation(invitation);
+      _userService.addUserInvitation(invitation);
     } catch (e) {
       print(e);
     }

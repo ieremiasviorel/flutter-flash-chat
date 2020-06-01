@@ -183,7 +183,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           UserProfile(currentUser.email, username, firstName, lastName));
 
       hideSpinner();
-
       Navigator.pushNamed(context, MainScreen.routeName);
     } catch (e) {
       print(e);

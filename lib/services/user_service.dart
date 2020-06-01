@@ -24,6 +24,10 @@ class UserService {
     return _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
+  Future<void> signOut() {
+    return _auth.signOut();
+  }
+
   Future<FirebaseUser> getCurrentUser() {
     return _auth.currentUser();
   }
@@ -100,9 +104,10 @@ class UserService {
       String userEmail, UserProfile userContact) async {
     final List<UserProfile> userContacts = await getUserContacts(userEmail);
     userContacts.add(userContact);
-    await setUserContacts(userEmail, userContacts);
+    final List<UserProfile> updatedUserContacts =
+        await setUserContacts(userEmail, userContacts);
 
-    return userContacts;
+    return updatedUserContacts;
   }
 
   Future<List<UserInvitation>> getUserInvitations(String username) async {
@@ -119,7 +124,7 @@ class UserService {
             .toList());
   }
 
-  Future<UserInvitation> setUserInvitation(
+  Future<UserInvitation> addUserInvitation(
       UserInvitation userInvitation) async {
     await _store
         .collection('invitations')
@@ -200,22 +205,6 @@ class UserService {
     } else {
       return null;
     }
-  }
-
-  Future<List<Message>> getAllMessages(
-      String senderEmail, String receiverEmail) async {
-    final messageDocuments = await _store
-        .collection('messages')
-        .where('senderEmail', isEqualTo: senderEmail)
-        .where('receiverEmail', isEqualTo: receiverEmail)
-        .getDocuments()
-        .then((messageQueryResult) => messageQueryResult.documents);
-
-    return messageDocuments
-        .map((messageDocument) => messageDocument.data)
-        .toList()
-        .map((messageData) => Message.fromJson(messageData))
-        .toList();
   }
 
   Stream<QuerySnapshot> getMessageSnapshots(
