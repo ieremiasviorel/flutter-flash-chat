@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flash_chat/constants.dart';
+import 'package:flash_chat/models/chat_screen_arguments.dart';
+import 'package:flash_chat/models/message.dart';
+import 'package:flash_chat/models/user_profile.dart';
+import 'package:flash_chat/services/user_service.dart';
 import 'package:flutter/material.dart';
-
-FirebaseUser loggedInUser;
 
 class ChatScreen extends StatefulWidget {
   static const String routeName = 'chatScreen';
@@ -13,45 +14,26 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final _auth = FirebaseAuth.instance;
-  final _store = Firestore.instance;
+  final UserService _userService = UserService.instance;
 
   final messageTextController = TextEditingController();
-
   String messageText;
 
   @override
   void initState() {
     super.initState();
-    getCurrentUser();
-  }
-
-  void getCurrentUser() async {
-    try {
-      final user = await _auth.currentUser();
-      if (user != null) {
-        loggedInUser = user;
-      }
-    } catch (e) {
-      print(e);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final ChatScreenArguments args = ModalRoute.of(context).settings.arguments;
+    final UserProfile currentUser = args.currentUser;
+    final UserProfile otherUser = args.otherUser;
+
     return Scaffold(
       backgroundColor: Colors.lightBlue[100],
       appBar: AppBar(
-        leading: null,
-        actions: <Widget>[
-          IconButton(
-              icon: Icon(Icons.close),
-              onPressed: () {
-                _auth.signOut();
-                Navigator.pop(context);
-              }),
-        ],
-        title: Text('⚡️Chat'),
+        title: Text(otherUser.firstName + ' ' + otherUser.lastName),
         backgroundColor: Colors.lightBlueAccent,
       ),
       body: SafeArea(
@@ -59,7 +41,7 @@ class _ChatScreenState extends State<ChatScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            MessageStream(),
+            MessageStream(currentUser, otherUser),
             Container(
               decoration: kMessageContainerDecoration,
               child: Row(
@@ -75,12 +57,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                   FlatButton(
-                    onPressed: () {
-                      _store.collection('messages').add({
-                        'text': messageText,
-                        'sender': loggedInUser.email,
-                        'timestamp': DateTime.now().millisecondsSinceEpoch
-                      });
+                    onPressed: () async {
+                      await _userService.addMessage(Message(
+                          currentUser.email,
+                          otherUser.email,
+                          messageText,
+                          DateTime.now().millisecondsSinceEpoch));
                       messageTextController.clear();
                     },
                     child: Text(
@@ -99,28 +81,30 @@ class _ChatScreenState extends State<ChatScreen> {
 }
 
 class MessageStream extends StatelessWidget {
-  final _store = Firestore.instance;
+  final UserService _userService = UserService.instance;
+
+  final UserProfile currentUser;
+  final UserProfile otherUser;
+
+  MessageStream(this.currentUser, this.otherUser);
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _store
-          .collection('messages')
-          .orderBy('timestamp', descending: true)
-          .snapshots(),
+      stream:
+          _userService.getMessageSnapshots(currentUser.email, otherUser.email),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           final messages = snapshot.data.documents;
           List<MessageBubble> messageWidgets = [];
           for (var message in messages) {
-            final messageText = message.data['text'];
-            final messageSender = message.data['sender'];
+            final messageText = message.data['messageText'];
+            final messageSender = message.data['senderEmail'];
 
-            final currentUser = loggedInUser.email;
             final messageWidget = MessageBubble(
               text: messageText,
               sender: messageSender,
-              isMe: currentUser == messageSender,
+              isMe: currentUser.email == messageSender,
             );
             messageWidgets.add(messageWidget);
           }
@@ -154,7 +138,7 @@ class MessageBubble extends StatelessWidget {
       padding: EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment:
-        isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: <Widget>[
           Text(
             this.sender,
@@ -164,13 +148,13 @@ class MessageBubble extends StatelessWidget {
             elevation: 5.0,
             borderRadius: isMe
                 ? BorderRadius.only(
-                topLeft: Radius.circular(30),
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30))
+                    topLeft: Radius.circular(30),
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30))
                 : BorderRadius.only(
-                topRight: Radius.circular(30),
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30)),
+                    topRight: Radius.circular(30),
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30)),
             color: isMe ? Colors.lightBlue : Color(0xFFF7B914),
             textStyle: TextStyle(),
             child: Padding(

@@ -1,5 +1,7 @@
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:flash_chat/models/chat_screen_arguments.dart';
 import 'package:flash_chat/models/conversation.dart';
+import 'package:flash_chat/screens/chat_screen.dart';
 import 'package:flash_chat/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -37,7 +39,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                       itemCount: userConversations.length,
                       itemBuilder: (context, index) {
                         final conversation = userConversations[index];
-                        return UserConversationsList(
+                        return UserConversationsListItem(
                             conversation: conversation);
                       })
                   : Center(
@@ -88,40 +90,46 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   }
 }
 
-class UserConversationsList extends StatelessWidget {
+class UserConversationsListItem extends StatelessWidget {
   final Conversation conversation;
 
-  const UserConversationsList({this.conversation});
+  const UserConversationsListItem({this.conversation});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
         padding: EdgeInsets.all(0),
-        child: Card(
-          color: Colors.transparent,
-          child: Row(children: <Widget>[
-            Expanded(
-                child: ListTile(
-              title: Text(
-                  conversation.otherUser.firstName +
-                      ' ' +
-                      conversation.otherUser.lastName,
-                  style: TextStyle(fontSize: 20)),
-              subtitle: Text(conversation.lastMessage.messageText,
-                  style: TextStyle(fontSize: 15),
-                  overflow: TextOverflow.ellipsis),
-            )),
-            Expanded(
-                child: ListTile(
-              title: Text(
-                  timestampToPrintableDate(
-                      conversation.lastMessage.messageTimestamp),
-                  textAlign: TextAlign.right,
-                  style: TextStyle(fontSize: 15)),
-              subtitle: Text(''),
-            )),
-          ]),
-        ));
+        child: GestureDetector(
+            onTap: () {
+              Navigator.pushNamed(context, ChatScreen.routeName,
+                  arguments: ChatScreenArguments(
+                      conversation.currentUser, conversation.otherUser));
+            },
+            child: Card(
+              color: Colors.transparent,
+              child: Row(children: <Widget>[
+                Expanded(
+                    child: ListTile(
+                  title: Text(
+                      conversation.otherUser.firstName +
+                          ' ' +
+                          conversation.otherUser.lastName,
+                      style: TextStyle(fontSize: 20)),
+                  subtitle: Text(conversation.lastMessage.messageText,
+                      style: TextStyle(fontSize: 15),
+                      overflow: TextOverflow.ellipsis),
+                )),
+                Expanded(
+                    child: ListTile(
+                  title: Text(
+                      timestampToPrintableDate(
+                          conversation.lastMessage.messageTimestamp),
+                      textAlign: TextAlign.right,
+                      style: TextStyle(fontSize: 15)),
+                  subtitle: Text(''),
+                )),
+              ]),
+            )));
   }
 
   String timestampToPrintableDate(int timestamp) {

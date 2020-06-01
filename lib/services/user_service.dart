@@ -217,6 +217,17 @@ class UserService {
         .toList();
   }
 
+  Stream<QuerySnapshot> getMessageSnapshots(
+      String participantAEmail, String participantBEmail) {
+    return _store
+        .collection('messages')
+        .where('participants',
+            isEqualTo: Message.createParticipantsField(
+                participantAEmail, participantBEmail))
+        .orderBy('messageTimestamp', descending: true)
+        .snapshots();
+  }
+
   String invitationDocumentKey(UserInvitation userInvitation) {
     return userInvitation.inviter.username + '-' + userInvitation.invited;
   }

@@ -1,9 +1,12 @@
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:flash_chat/models/chat_screen_arguments.dart';
 import 'package:flash_chat/models/user_invitation.dart';
 import 'package:flash_chat/models/user_profile.dart';
 import 'package:flash_chat/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:modal_progress_hud/modal_progress_hud.dart';
+
+import 'chat_screen.dart';
 
 class ContactsScreen extends StatefulWidget {
   static const String routeName = 'contactsScreen';
@@ -15,6 +18,7 @@ class ContactsScreen extends StatefulWidget {
 class _ContactsScreenState extends State<ContactsScreen> {
   final UserService _userService = UserService.instance;
 
+  UserProfile currentUser;
   List<UserProfile> userContacts;
   bool showSpinner = false;
 
@@ -37,7 +41,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
                       itemCount: userContacts.length,
                       itemBuilder: (context, index) {
                         final userContact = userContacts[index];
-                        return UserContactsList(userContact: userContact);
+                        return UserContactsList(
+                            currentUser: currentUser, userContact: userContact);
                       })
                   : Center(
                       child: TypewriterAnimatedTextKit(
@@ -62,11 +67,15 @@ class _ContactsScreenState extends State<ContactsScreen> {
   void getUserContacts() async {
     displaySpinner();
 
-    List<UserProfile> userContactsList = [];
+    UserProfile currentUserProfile;
+    List<UserProfile> currentUserContacts = [];
 
     try {
-      final currentUser = await _userService.getCurrentUser();
-      userContactsList = await _userService.getUserContacts(currentUser.email);
+      final authUser = await _userService.getCurrentUser();
+      currentUserProfile =
+          await _userService.getUserProfileByEmail(authUser.email);
+      currentUserContacts =
+          await _userService.getUserContacts(currentUserProfile.email);
     } catch (e) {
       print(e);
     } finally {
@@ -74,7 +83,11 @@ class _ContactsScreenState extends State<ContactsScreen> {
     }
 
     setState(() {
-      userContacts = userContactsList;
+      currentUser = currentUserProfile;
+    });
+
+    setState(() {
+      userContacts = currentUserContacts;
     });
   }
 
@@ -147,26 +160,34 @@ class _ContactsScreenState extends State<ContactsScreen> {
 }
 
 class UserContactsList extends StatelessWidget {
+  final UserProfile currentUser;
   final UserProfile userContact;
 
-  const UserContactsList({this.userContact});
+  const UserContactsList({this.currentUser, this.userContact});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.all(5),
-      child: Card(
-        child: Row(
-          children: <Widget>[
-            Icon(Icons.person, size: 60),
-            Expanded(
-                child: ListTile(
-              title: Text(userContact.firstName + ' ' + userContact.lastName),
-              subtitle: Text(userContact.username + ' | ' + userContact.email),
-            )),
-          ],
-        ),
-      ),
-    );
+        padding: EdgeInsets.all(5),
+        child: GestureDetector(
+          onTap: () {
+            Navigator.pushNamed(context, ChatScreen.routeName,
+                arguments: ChatScreenArguments(currentUser, userContact));
+          },
+          child: Card(
+            child: Row(
+              children: <Widget>[
+                Icon(Icons.person, size: 60),
+                Expanded(
+                    child: ListTile(
+                  title:
+                      Text(userContact.firstName + ' ' + userContact.lastName),
+                  subtitle:
+                      Text(userContact.username + ' | ' + userContact.email),
+                )),
+              ],
+            ),
+          ),
+        ));
   }
 }
