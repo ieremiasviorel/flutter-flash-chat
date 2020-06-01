@@ -158,21 +158,9 @@ class UserService {
     final List<UserProfile> contacts = await getUserContacts(userEmail);
 
     await Future.forEach(contacts, (contact) async {
-      final lastMessageAsSender =
-          await getLatestMessage(userEmail, contact.email);
-      final lastMessageAsReceiver =
-          await getLatestMessage(contact.email, userEmail);
+      final lastMessage = await getLastMessage(userEmail, contact.email);
 
-      if (lastMessageAsSender != null || lastMessageAsReceiver != null) {
-        final lastMessage = (lastMessageAsSender != null
-                    ? lastMessageAsSender.messageTimestamp
-                    : 0) >
-                (lastMessageAsReceiver != null
-                    ? lastMessageAsReceiver.messageTimestamp
-                    : 0)
-            ? lastMessageAsSender
-            : lastMessageAsReceiver;
-
+      if (lastMessage != null) {
         conversations.add(Conversation(user, contact, lastMessage));
       }
     });
@@ -186,12 +174,18 @@ class UserService {
     return conversations;
   }
 
-  Future<Message> getLatestMessage(
-      String senderEmail, String receiverEmail) async {
+  Future<Message> addMessage(Message message) async {
+    await _store.collection('messages').add(Message.toJson(message));
+
+    return message;
+  }
+
+  Future<Message> getLastMessage(
+      String participantAEmail, String participantBEmail) async {
     final latestMessageDocument = await _store
         .collection('messages')
-        .where('senderEmail', isEqualTo: senderEmail)
-        .where('receiverEmail', isEqualTo: receiverEmail)
+        .where('participants',
+            isEqualTo: [participantAEmail, participantBEmail])
         .orderBy('messageTimestamp', descending: true)
         .limit(1)
         .getDocuments()
@@ -205,6 +199,22 @@ class UserService {
     } else {
       return null;
     }
+  }
+
+  Future<List<Message>> getAllMessages(
+      String senderEmail, String receiverEmail) async {
+    final messageDocuments = await _store
+        .collection('messages')
+        .where('senderEmail', isEqualTo: senderEmail)
+        .where('receiverEmail', isEqualTo: receiverEmail)
+        .getDocuments()
+        .then((messageQueryResult) => messageQueryResult.documents);
+
+    return messageDocuments
+        .map((messageDocument) => messageDocument.data)
+        .toList()
+        .map((messageData) => Message.fromJson(messageData))
+        .toList();
   }
 
   String invitationDocumentKey(UserInvitation userInvitation) {
