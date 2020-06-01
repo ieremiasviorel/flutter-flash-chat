@@ -1,7 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flash_chat/models/user_invitation.dart';
-import 'package:flash_chat/models/user_profile.dart';
+import 'package:flash_chat/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:modal_progress_hud/modal_progress_hud.dart';
 
@@ -13,8 +11,7 @@ class InvitationsScreen extends StatefulWidget {
 }
 
 class _InvitationsScreenState extends State<InvitationsScreen> {
-  final _auth = FirebaseAuth.instance;
-  final _store = Firestore.instance;
+  final UserService _userService = UserService.instance;
 
   List<UserInvitation> userInvitations = new List<UserInvitation>();
   bool showSpinner = false;
@@ -36,44 +33,25 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
               itemCount: userInvitations.length,
               itemBuilder: (context, index) {
                 final userInvitation = userInvitations[index];
-                return Invitation(invitation: userInvitation);
+                return Invitation(
+                    userInvitation, acceptUserInvitation, rejectUserInvitation);
               }),
           inAsyncCall: showSpinner),
     );
   }
 
-  void getUserInvitations() async {
+  Future<void> getUserInvitations() async {
     displaySpinner();
 
     List<UserInvitation> userInvitationsList = [];
 
     try {
-      final user = await _auth.currentUser();
-      if (user != null) {
-        final userProfile = await _store
-            .collection('profiles')
-            .document(user.email)
-            .get()
-            .then((userProfileDocument) => userProfileDocument.data)
-            .then((userProfileJson) => userProfileJson != null
-                ? UserProfile.fromJson(userProfileJson)
-                : null);
+      final user = await _userService.getCurrentUser();
+      final userProfile = await _userService.getUserProfileByEmail(user.email);
 
-        if (userProfile != null) {
-          userInvitationsList = await _store
-              .collection('invitations')
-              .where('invited', isEqualTo: userProfile.username)
-              .getDocuments()
-              .then(
-                  (invitationsQueryResult) => invitationsQueryResult.documents)
-              .then((invitationsDocuments) => invitationsDocuments
-                  .map((invitationDocument) => invitationDocument.data)
-                  .toList())
-              .then((invitationsData) => invitationsData
-                  .map((invitationData) =>
-                      UserInvitation.fromJson(invitationData))
-                  .toList());
-        }
+      if (userProfile != null) {
+        userInvitationsList =
+            await _userService.getUserInvitations(userProfile.username);
       }
     } catch (e) {
       print(e);
@@ -84,6 +62,32 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
     setState(() {
       userInvitations = userInvitationsList;
     });
+  }
+
+  void acceptUserInvitation(UserInvitation invitation) async {
+    displaySpinner();
+
+    try {
+      await _userService.acceptInvitation(invitation);
+      await getUserInvitations();
+    } catch (e) {
+      print(e);
+    }
+
+    hideSpinner();
+  }
+
+  void rejectUserInvitation(UserInvitation invitation) async {
+    displaySpinner();
+
+    try {
+      await _userService.deleteInvitation(invitation);
+      await getUserInvitations();
+    } catch (e) {
+      print(e);
+    }
+
+    hideSpinner();
   }
 
   void displaySpinner() {
@@ -100,9 +104,16 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
 }
 
 class Invitation extends StatelessWidget {
-  final UserInvitation invitation;
+  UserInvitation invitation;
+  Function(UserInvitation) acceptUserInvitation;
+  Function(UserInvitation) rejectUserInvitation;
 
-  const Invitation({this.invitation});
+  Invitation(UserInvitation invitation, Function acceptUserInvitation,
+      Function rejectUserInvitation) {
+    this.invitation = invitation;
+    this.acceptUserInvitation = acceptUserInvitation;
+    this.rejectUserInvitation = rejectUserInvitation;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +142,7 @@ class Invitation extends StatelessWidget {
                       size: 35,
                       color: Colors.green,
                     ),
-                    onPressed: () => {print('Pressed')}),
+                    onPressed: onAcceptUserInvitation),
               ),
               padding: EdgeInsets.all(10),
             ),
@@ -144,7 +155,7 @@ class Invitation extends StatelessWidget {
                       size: 35,
                       color: Colors.red,
                     ),
-                    onPressed: () => {print('Pressed')}),
+                    onPressed: onRejectUserInvitation),
               ),
               padding: EdgeInsets.all(10),
             ),
@@ -152,5 +163,13 @@ class Invitation extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  onAcceptUserInvitation() async {
+    await acceptUserInvitation(invitation);
+  }
+
+  onRejectUserInvitation() async {
+    await rejectUserInvitation(invitation);
   }
 }

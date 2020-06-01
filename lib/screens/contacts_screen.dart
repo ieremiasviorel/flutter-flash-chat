@@ -1,6 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flash_chat/models/user_invitation.dart';
 import 'package:flash_chat/models/user_profile.dart';
+import 'package:flash_chat/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:modal_progress_hud/modal_progress_hud.dart';
 
@@ -12,8 +12,7 @@ class ContactsScreen extends StatefulWidget {
 }
 
 class _ContactsScreenState extends State<ContactsScreen> {
-  final _auth = FirebaseAuth.instance;
-  final _store = Firestore.instance;
+  final UserService _userService = UserService.instance;
 
   List<UserProfile> userContacts = new List<UserProfile>();
   bool showSpinner = false;
@@ -35,7 +34,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
               itemCount: userContacts.length,
               itemBuilder: (context, index) {
                 final userContact = userContacts[index];
-                return UserContactComp(userContact: userContact);
+                return UserContactsList(userContact: userContact);
               }),
           inAsyncCall: showSpinner),
       floatingActionButton: FloatingActionButton(
@@ -52,21 +51,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
     List<UserProfile> userContactsList = [];
 
     try {
-      final user = await _auth.currentUser();
-      if (user != null) {
-        final userContactsData = await _store
-            .collection('contacts')
-            .document(user.email)
-            .get()
-            .then((userContactsDocument) => userContactsDocument.data);
-
-        if (userContactsData != null) {
-          userContactsList = userContactsData['contacts']
-              .map<UserProfile>(
-                  (userProfileJson) => UserProfile.fromJson(userProfileJson))
-              .toList();
-        }
-      }
+      final currentUser = await _userService.getCurrentUser();
+      userContactsList = await _userService.getUserContacts(currentUser.email);
     } catch (e) {
       print(e);
     } finally {
@@ -119,17 +105,18 @@ class _ContactsScreenState extends State<ContactsScreen> {
         });
   }
 
-  void sendInvitation(String username) async {
-    _auth
-        .currentUser()
-        .then(
-            (user) => _store.collection('profiles').document(user.email).get())
-        .then((userDocument) => userDocument.data)
-        .then((userData) => UserProfile.fromJson(userData))
-        .then((userProfile) =>
-            {'inviter': UserProfile.toJson(userProfile), 'invited': username})
-        .then((invitationMap) =>
-            _store.collection('invitations').add(invitationMap));
+  void sendInvitation(String invitedUsername) async {
+    final currentUser = await _userService.getCurrentUser();
+    final inviterUserProfile =
+        await _userService.getUserProfileByEmail(currentUser.email);
+
+    final invitation = UserInvitation(inviterUserProfile, invitedUsername);
+
+    try {
+      _userService.setUserInvitation(invitation);
+    } catch (e) {
+      print(e);
+    }
   }
 
   void displaySpinner() {
@@ -145,10 +132,10 @@ class _ContactsScreenState extends State<ContactsScreen> {
   }
 }
 
-class UserContactComp extends StatelessWidget {
+class UserContactsList extends StatelessWidget {
   final UserProfile userContact;
 
-  const UserContactComp({this.userContact});
+  const UserContactsList({this.userContact});
 
   @override
   Widget build(BuildContext context) {

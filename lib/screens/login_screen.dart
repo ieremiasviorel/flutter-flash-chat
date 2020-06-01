@@ -155,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void handleNavigationAfterAuth() async {
-    UserProfile userProfile = await _userService.getUserProfile(email);
+    UserProfile userProfile = await _userService.getUserProfileByEmail(email);
 
     if (userProfile != null) {
       Navigator.pushNamed(context, MainScreen.routeName);
