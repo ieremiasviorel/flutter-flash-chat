@@ -13,8 +13,8 @@ class UserProfile {
     this.lastName = userProfileJson['lastName'];
   }
 
-  static Map toJson(UserProfile userProfile) {
-    final userProfileMap = new Map();
+  static Map<String, String> toJson(UserProfile userProfile) {
+    final userProfileMap = new Map<String, String>();
     userProfileMap['email'] = userProfile.email;
     userProfileMap['username'] = userProfile.username;
     userProfileMap['firstName'] = userProfile.firstName;

@@ -1,11 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flash_chat/components/long_button.dart';
+import 'package:flash_chat/models/user_profile.dart';
+import 'package:flash_chat/screens/main_screen.dart';
+import 'package:flash_chat/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:modal_progress_hud/modal_progress_hud.dart';
 
 import '../constants.dart';
-import 'chat_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   static const String routeName = 'profileScreen';
@@ -15,8 +16,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _auth = FirebaseAuth.instance;
-  final _store = Firestore.instance;
+  final UserService _userService = UserService.instance;
 
   String username;
   String usernameValidationText;
@@ -177,17 +177,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
-      FirebaseUser currentUser = await _auth.currentUser();
+      FirebaseUser currentUser = await _userService.getCurrentUser();
 
-      _store.collection('profiles').document(currentUser.email).setData({
-        'email': currentUser.email,
-        'username': username,
-        'firstName': firstName,
-        'lastName': lastName
-      });
+      await _userService.setUserProfile(
+          UserProfile(currentUser.email, username, firstName, lastName));
+
       hideSpinner();
 
-      Navigator.pushNamed(context, ChatScreen.routeName);
+      Navigator.pushNamed(context, MainScreen.routeName);
     } catch (e) {
       print(e);
       hideSpinner();

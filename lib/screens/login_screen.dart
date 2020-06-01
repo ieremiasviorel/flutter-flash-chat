@@ -1,9 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flash_chat/components/long_button.dart';
 import 'package:flash_chat/models/user_profile.dart';
 import 'package:flash_chat/screens/main_screen.dart';
 import 'package:flash_chat/screens/profile_screen.dart';
+import 'package:flash_chat/services/user_service.dart';
+import 'package:flash_chat/utils/input_validators.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:modal_progress_hud/modal_progress_hud.dart';
@@ -18,8 +18,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _auth = FirebaseAuth.instance;
-  final _store = Firestore.instance;
+  final UserService _userService = UserService.instance;
 
   String email;
   String emailValidationText;
@@ -107,29 +106,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  String validateEmail(String email) {
-    final emailRegEx = RegExp(
-        r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$');
-
-    if (email == null || email.isEmpty) {
-      return 'Email cannot be empty';
-    } else if (!emailRegEx.hasMatch(email)) {
-      return 'Email is not valid';
-    } else {
-      return null;
-    }
-  }
-
-  String validatePassword(String password) {
-    if (password == null || password.isEmpty) {
-      return 'Password cannot be empty';
-    } else if (password.length < 8) {
-      return 'Password is too short';
-    } else {
-      return null;
-    }
-  }
-
   bool validateInputs() {
     String emailValidation = validateEmail(email);
     String passwordValidation = validatePassword(password);
@@ -166,8 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      final authResult = await _auth.signInWithEmailAndPassword(
-          email: email, password: password);
+      final authResult = await _userService.authenticate(email, password);
 
       hideSpinner();
 
@@ -176,6 +151,16 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       handleAuthException(e);
+    }
+  }
+
+  void handleNavigationAfterAuth() async {
+    UserProfile userProfile = await _userService.getUserProfile(email);
+
+    if (userProfile != null) {
+      Navigator.pushNamed(context, MainScreen.routeName);
+    } else {
+      Navigator.pushNamed(context, ProfileScreen.routeName);
     }
   }
 
@@ -194,26 +179,5 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
     hideSpinner();
-  }
-
-  void handleNavigationAfterAuth() async {
-    UserProfile userProfile = await getUserProfile(email);
-
-    if (userProfile != null) {
-      Navigator.pushNamed(context, MainScreen.routeName);
-    } else {
-      Navigator.pushNamed(context, ProfileScreen.routeName);
-    }
-  }
-
-  Future<UserProfile> getUserProfile(String email) {
-    return _store
-        .collection('profiles')
-        .document(email)
-        .get()
-        .then((userProfileDocument) => userProfileDocument.data)
-        .then((userProfileJson) => userProfileJson != null
-            ? UserProfile.fromJson(userProfileJson)
-            : null);
   }
 }
